@@ -41,10 +41,22 @@ TELEGRAM_BOT_TOKEN=tu_token_aquí
 TELEGRAM_CHAT_ID=tu_chat_id_aquí
 ```
 
-## Uso Diario
+## Verificar Configuración
 
 ```bash
 # Activar entorno
+source venv/bin/activate  # Linux/Mac
+# o
+venv\Scripts\activate     # Windows
+
+# Verificar que todo está bien configurado
+python verify_integrations.py
+```
+
+## Uso Diario
+
+```bash
+# Activar entorno (si no está activo)
 source venv/bin/activate
 
 # Procesar correos
@@ -103,6 +115,16 @@ sqlite3 emails.db "DELETE FROM processed_emails"
 
 # Ver estadísticas
 sqlite3 emails.db "SELECT priority, COUNT(*) FROM processed_emails GROUP BY priority"
+```
+
+## Testing
+
+```bash
+# Verificar integraciones reales (Telegram, IA, Gmail)
+python verify_integrations.py
+
+# Ejecutar pruebas unitarias
+pytest tests/ -v
 ```
 
 ## ¿Necesitas Ayuda?
