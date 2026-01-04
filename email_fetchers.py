@@ -162,6 +162,7 @@ class MockEmailFetcher(EmailFetcher):
         self.authenticated = False
         self.emails: List[Email] = []
         self.read_emails: List[str] = []
+        self._should_fail_auth = False
 
     def set_emails(self, emails: List[Email]):
         """Configura los correos que retornará get_unread_emails"""
@@ -172,12 +173,16 @@ class MockEmailFetcher(EmailFetcher):
         self.emails.append(email)
 
     def authenticate(self) -> bool:
-        """Simula autenticación exitosa"""
+        """Simula autenticación"""
+        if self._should_fail_auth:
+            self.authenticated = False
+            return False
         self.authenticated = True
         return True
 
     def set_auth_failure(self):
         """Configura para que la autenticación falle"""
+        self._should_fail_auth = True
         self.authenticated = False
 
     def get_unread_emails(self, max_results: int = 50, query: str = "") -> List[Email]:
