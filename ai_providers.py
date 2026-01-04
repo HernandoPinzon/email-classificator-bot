@@ -3,41 +3,38 @@ Proveedores de IA - Soporte para Ollama local y APIs gratuitas
 Implementa rotación entre servicios para aprovechar capas gratuitas
 """
 
-import os
 import json
-import requests
-from typing import Dict, Optional, AsyncIterator
-from abc import ABC, abstractmethod
+import re
+from typing import Dict, List, Optional
 
-
-class AIProvider(ABC):
-    """Interfaz base para todos los proveedores de IA"""
-
-    @abstractmethod
-    def get_name(self) -> str:
-        """Retorna el nombre del proveedor"""
-        pass
-
-    @abstractmethod
-    def generate(self, prompt: str) -> Dict:
-        """
-        Genera una respuesta del modelo
-
-        Args:
-            prompt: El prompt a enviar al modelo
-
-        Returns:
-            Dict con la respuesta del modelo
-        """
-        pass
+from interfaces import AIProvider
+from config import (
+    AIProviderConfig, OllamaConfig, GroqConfig,
+    CerebrasConfig, GeminiConfig, OpenRouterConfig
+)
+from http_client import RequestsHttpClient
 
 
 class OllamaProvider(AIProvider):
     """Proveedor para Ollama local"""
 
-    def __init__(self, host: str = "http://localhost:11434", model: str = "llama3.2"):
-        self.host = host
-        self.model = model
+    def __init__(self, config: OllamaConfig = None, http_client=None,
+                 host: str = None, model: str = None):
+        """
+        Args:
+            config: Configuración de Ollama
+            http_client: Cliente HTTP inyectable
+            host: Host de Ollama (legacy, para compatibilidad)
+            model: Modelo a usar (legacy, para compatibilidad)
+        """
+        if config:
+            self.host = config.host
+            self.model = config.model
+        else:
+            self.host = host or "http://localhost:11434"
+            self.model = model or "llama3.2"
+
+        self.http_client = http_client or RequestsHttpClient()
 
     def get_name(self) -> str:
         return f"Ollama ({self.model})"
@@ -45,7 +42,7 @@ class OllamaProvider(AIProvider):
     def generate(self, prompt: str) -> Dict:
         """Genera respuesta usando Ollama local"""
         try:
-            response = requests.post(
+            response = self.http_client.post(
                 f"{self.host}/api/generate",
                 json={
                     "model": self.model,
@@ -68,7 +65,6 @@ class OllamaProvider(AIProvider):
 
     def _parse_response(self, response_text: str) -> Dict:
         """Parsea y limpia la respuesta JSON"""
-        import re
         response_text = response_text.strip()
         if response_text.startswith('```'):
             response_text = re.sub(r'```json\s*|\s*```', '', response_text)
@@ -78,10 +74,18 @@ class OllamaProvider(AIProvider):
 class GroqProvider(AIProvider):
     """Proveedor para Groq API - Hasta 60 llamadas/minuto gratis"""
 
-    def __init__(self, api_key: str, model: str = "mixtral-8x7b-32768"):
-        self.api_key = api_key
-        self.model = model
-        self.base_url = "https://api.groq.com/openai/v1"
+    def __init__(self, config: GroqConfig = None, http_client=None,
+                 api_key: str = None, model: str = None):
+        if config:
+            self.api_key = config.api_key
+            self.model = config.model
+            self.base_url = config.base_url
+        else:
+            self.api_key = api_key or ""
+            self.model = model or "mixtral-8x7b-32768"
+            self.base_url = "https://api.groq.com/openai/v1"
+
+        self.http_client = http_client or RequestsHttpClient()
 
     def get_name(self) -> str:
         return f"Groq ({self.model})"
@@ -89,7 +93,7 @@ class GroqProvider(AIProvider):
     def generate(self, prompt: str) -> Dict:
         """Genera respuesta usando Groq API"""
         try:
-            response = requests.post(
+            response = self.http_client.post(
                 f"{self.base_url}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
@@ -120,10 +124,18 @@ class GroqProvider(AIProvider):
 class CerebrasProvider(AIProvider):
     """Proveedor para Cerebras API - Hasta 30 llamadas/minuto gratis"""
 
-    def __init__(self, api_key: str, model: str = "llama3.1-8b"):
-        self.api_key = api_key
-        self.model = model
-        self.base_url = "https://api.cerebras.ai/v1"
+    def __init__(self, config: CerebrasConfig = None, http_client=None,
+                 api_key: str = None, model: str = None):
+        if config:
+            self.api_key = config.api_key
+            self.model = config.model
+            self.base_url = config.base_url
+        else:
+            self.api_key = api_key or ""
+            self.model = model or "llama3.1-8b"
+            self.base_url = "https://api.cerebras.ai/v1"
+
+        self.http_client = http_client or RequestsHttpClient()
 
     def get_name(self) -> str:
         return f"Cerebras ({self.model})"
@@ -131,7 +143,7 @@ class CerebrasProvider(AIProvider):
     def generate(self, prompt: str) -> Dict:
         """Genera respuesta usando Cerebras API"""
         try:
-            response = requests.post(
+            response = self.http_client.post(
                 f"{self.base_url}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
@@ -162,10 +174,18 @@ class CerebrasProvider(AIProvider):
 class GeminiProvider(AIProvider):
     """Proveedor para Google Gemini API - Hasta 60 llamadas/minuto gratis"""
 
-    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
-        self.api_key = api_key
-        self.model = model
-        self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+    def __init__(self, config: GeminiConfig = None, http_client=None,
+                 api_key: str = None, model: str = None):
+        if config:
+            self.api_key = config.api_key
+            self.model = config.model
+            self.base_url = config.base_url
+        else:
+            self.api_key = api_key or ""
+            self.model = model or "gemini-1.5-flash"
+            self.base_url = "https://generativelanguage.googleapis.com/v1beta"
+
+        self.http_client = http_client or RequestsHttpClient()
 
     def get_name(self) -> str:
         return f"Gemini ({self.model})"
@@ -173,10 +193,9 @@ class GeminiProvider(AIProvider):
     def generate(self, prompt: str) -> Dict:
         """Genera respuesta usando Gemini API"""
         try:
-            # Gemini usa un formato diferente
             url = f"{self.base_url}/models/{self.model}:generateContent?key={self.api_key}"
 
-            response = requests.post(
+            response = self.http_client.post(
                 url,
                 headers={"Content-Type": "application/json"},
                 json={
@@ -205,10 +224,18 @@ class GeminiProvider(AIProvider):
 class OpenRouterProvider(AIProvider):
     """Proveedor para OpenRouter - Múltiples modelos con capa gratuita"""
 
-    def __init__(self, api_key: str, model: str = "meta-llama/llama-3.2-3b-instruct:free"):
-        self.api_key = api_key
-        self.model = model
-        self.base_url = "https://openrouter.ai/api/v1"
+    def __init__(self, config: OpenRouterConfig = None, http_client=None,
+                 api_key: str = None, model: str = None):
+        if config:
+            self.api_key = config.api_key
+            self.model = config.model
+            self.base_url = config.base_url
+        else:
+            self.api_key = api_key or ""
+            self.model = model or "meta-llama/llama-3.2-3b-instruct:free"
+            self.base_url = "https://openrouter.ai/api/v1"
+
+        self.http_client = http_client or RequestsHttpClient()
 
     def get_name(self) -> str:
         return f"OpenRouter ({self.model})"
@@ -216,7 +243,7 @@ class OpenRouterProvider(AIProvider):
     def generate(self, prompt: str) -> Dict:
         """Genera respuesta usando OpenRouter API"""
         try:
-            response = requests.post(
+            response = self.http_client.post(
                 f"{self.base_url}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {self.api_key}",
@@ -246,20 +273,29 @@ class OpenRouterProvider(AIProvider):
             raise Exception(f"Error en OpenRouter: {e}")
 
 
-class AIProviderManager:
+class AIProviderManager(AIProvider):
     """
     Gestor de proveedores de IA con rotación automática (Round Robin)
     Permite usar múltiples servicios gratuitos alternándolos
     """
 
-    def __init__(self):
-        self.providers = []
-        self.current_index = 0
+    def __init__(self, providers: List[AIProvider] = None):
+        self._providers: List[AIProvider] = providers or []
+        self._current_index = 0
+
+    @property
+    def providers(self) -> List[AIProvider]:
+        return self._providers
 
     def add_provider(self, provider: AIProvider):
         """Agrega un proveedor a la lista"""
-        self.providers.append(provider)
-        print(f"✅ Proveedor agregado: {provider.get_name()}")
+        self._providers.append(provider)
+        print(f"Proveedor agregado: {provider.get_name()}")
+
+    def get_name(self) -> str:
+        """Retorna el nombre del gestor"""
+        provider_names = [p.get_name() for p in self._providers]
+        return f"AIProviderManager ({', '.join(provider_names)})"
 
     def get_next_provider(self) -> AIProvider:
         """
@@ -268,15 +304,17 @@ class AIProviderManager:
         Returns:
             El siguiente proveedor disponible
         """
-        if not self.providers:
+        if not self._providers:
             raise Exception("No hay proveedores configurados")
 
-        provider = self.providers[self.current_index]
-
-        # Rotar al siguiente proveedor para la próxima llamada
-        self.current_index = (self.current_index + 1) % len(self.providers)
+        provider = self._providers[self._current_index]
+        self._current_index = (self._current_index + 1) % len(self._providers)
 
         return provider
+
+    def reset_rotation(self):
+        """Reinicia la rotación al primer proveedor"""
+        self._current_index = 0
 
     def generate(self, prompt: str) -> Dict:
         """
@@ -289,170 +327,158 @@ class AIProviderManager:
         Returns:
             Dict con la respuesta del modelo
         """
-        if not self.providers:
+        if not self._providers:
             raise Exception("No hay proveedores configurados")
 
-        # Intentar con todos los proveedores si es necesario
-        attempts = len(self.providers)
+        attempts = len(self._providers)
         last_error = None
 
         for _ in range(attempts):
             provider = self.get_next_provider()
 
             try:
-                print(f"🤖 Usando: {provider.get_name()}")
+                print(f"Usando: {provider.get_name()}")
                 return provider.generate(prompt)
             except Exception as e:
-                print(f"⚠️ Error con {provider.get_name()}: {e}")
+                print(f"Error con {provider.get_name()}: {e}")
                 last_error = e
                 continue
 
-        # Si todos fallaron
         raise Exception(f"Todos los proveedores fallaron. Último error: {last_error}")
 
 
-def create_provider_from_config() -> AIProviderManager:
+class MockAIProvider(AIProvider):
     """
-    Crea un gestor de proveedores basado en las variables de entorno
+    Proveedor de IA mock para testing.
+    Permite configurar respuestas predefinidas.
+    """
 
-    Variables de entorno soportadas:
-        AI_PROVIDER: Tipo de proveedor ('ollama', 'api', 'auto')
+    def __init__(self, name: str = "MockProvider"):
+        self._name = name
+        self.responses: Dict[str, Dict] = {}
+        self.default_response: Dict = {
+            "category": "notificacion",
+            "priority": "normal",
+            "summary": "Mock response",
+            "action_required": False
+        }
+        self.calls: List[str] = []
+        self.should_fail = False
+        self.failure_message = "Mock failure"
 
-        Para Ollama:
-            OLLAMA_HOST: Host de Ollama (default: http://localhost:11434)
-            OLLAMA_MODEL: Modelo a usar (default: llama3.2)
+    def get_name(self) -> str:
+        return self._name
 
-        Para APIs (se agregan todos los que tengan API key):
-            GROQ_API_KEY: API key de Groq
-            GROQ_MODEL: Modelo de Groq (default: mixtral-8x7b-32768)
+    def set_response(self, prompt_contains: str, response: Dict):
+        """Configura respuesta para prompts que contengan cierto texto"""
+        self.responses[prompt_contains] = response
 
-            CEREBRAS_API_KEY: API key de Cerebras
-            CEREBRAS_MODEL: Modelo de Cerebras (default: llama3.1-8b)
+    def set_default_response(self, response: Dict):
+        """Configura la respuesta por defecto"""
+        self.default_response = response
 
-            GEMINI_API_KEY: API key de Google Gemini
-            GEMINI_MODEL: Modelo de Gemini (default: gemini-1.5-flash)
+    def set_failure(self, should_fail: bool = True, message: str = "Mock failure"):
+        """Configura para simular fallo"""
+        self.should_fail = should_fail
+        self.failure_message = message
 
-            OPENROUTER_API_KEY: API key de OpenRouter
-            OPENROUTER_MODEL: Modelo de OpenRouter (default: meta-llama/llama-3.2-3b-instruct:free)
+    def generate(self, prompt: str) -> Dict:
+        """Retorna la respuesta configurada"""
+        self.calls.append(prompt)
+
+        if self.should_fail:
+            raise Exception(self.failure_message)
+
+        for key, response in self.responses.items():
+            if key in prompt:
+                return response
+
+        return self.default_response
+
+    def get_calls(self) -> List[str]:
+        """Retorna los prompts recibidos"""
+        return self.calls
+
+    def clear(self):
+        """Limpia configuraciones y llamadas"""
+        self.responses.clear()
+        self.calls.clear()
+        self.should_fail = False
+
+
+def create_provider_from_config(config: AIProviderConfig = None) -> AIProviderManager:
+    """
+    Crea un gestor de proveedores basado en la configuración.
+
+    Args:
+        config: Configuración de proveedores. Si es None, carga desde .env
 
     Returns:
         AIProviderManager configurado con los proveedores disponibles
     """
-    from dotenv import load_dotenv
-    load_dotenv()
+    if config is None:
+        from config import load_config_from_env
+        app_config = load_config_from_env()
+        config = app_config.ai_provider
 
     manager = AIProviderManager()
-    provider_type = os.getenv('AI_PROVIDER', 'ollama').lower()
+    provider_type = config.provider_type.lower()
 
-    print(f"\n🔧 Configurando proveedores de IA (modo: {provider_type})")
-    print("="*60)
+    print(f"\nConfigurando proveedores de IA (modo: {provider_type})")
+    print("=" * 60)
 
     if provider_type == 'ollama':
-        # Solo usar Ollama local
-        host = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-        model = os.getenv('OLLAMA_MODEL', 'llama3.2')
-        manager.add_provider(OllamaProvider(host, model))
+        manager.add_provider(OllamaProvider(config=config.ollama))
 
     elif provider_type == 'api':
-        # Solo usar APIs externas
         added = False
 
-        # Groq
-        if os.getenv('GROQ_API_KEY'):
-            model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
-            manager.add_provider(GroqProvider(os.getenv('GROQ_API_KEY'), model))
+        if config.groq.api_key:
+            manager.add_provider(GroqProvider(config=config.groq))
             added = True
 
-        # Cerebras
-        if os.getenv('CEREBRAS_API_KEY'):
-            model = os.getenv('CEREBRAS_MODEL', 'llama3.1-8b')
-            manager.add_provider(CerebrasProvider(os.getenv('CEREBRAS_API_KEY'), model))
+        if config.cerebras.api_key:
+            manager.add_provider(CerebrasProvider(config=config.cerebras))
             added = True
 
-        # Gemini
-        if os.getenv('GEMINI_API_KEY'):
-            model = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
-            manager.add_provider(GeminiProvider(os.getenv('GEMINI_API_KEY'), model))
+        if config.gemini.api_key:
+            manager.add_provider(GeminiProvider(config=config.gemini))
             added = True
 
-        # OpenRouter
-        if os.getenv('OPENROUTER_API_KEY'):
-            model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.2-3b-instruct:free')
-            manager.add_provider(OpenRouterProvider(os.getenv('OPENROUTER_API_KEY'), model))
+        if config.openrouter.api_key:
+            manager.add_provider(OpenRouterProvider(config=config.openrouter))
             added = True
 
         if not added:
             raise Exception("Modo 'api' seleccionado pero no hay API keys configuradas")
 
     elif provider_type == 'auto':
-        # Usar todo lo disponible (APIs primero, luego Ollama como fallback)
         added = False
 
-        # Intentar agregar APIs
-        if os.getenv('GROQ_API_KEY'):
-            model = os.getenv('GROQ_MODEL', 'mixtral-8x7b-32768')
-            manager.add_provider(GroqProvider(os.getenv('GROQ_API_KEY'), model))
+        if config.groq.api_key:
+            manager.add_provider(GroqProvider(config=config.groq))
             added = True
 
-        if os.getenv('CEREBRAS_API_KEY'):
-            model = os.getenv('CEREBRAS_MODEL', 'llama3.1-8b')
-            manager.add_provider(CerebrasProvider(os.getenv('CEREBRAS_API_KEY'), model))
+        if config.cerebras.api_key:
+            manager.add_provider(CerebrasProvider(config=config.cerebras))
             added = True
 
-        if os.getenv('GEMINI_API_KEY'):
-            model = os.getenv('GEMINI_MODEL', 'gemini-1.5-flash')
-            manager.add_provider(GeminiProvider(os.getenv('GEMINI_API_KEY'), model))
+        if config.gemini.api_key:
+            manager.add_provider(GeminiProvider(config=config.gemini))
             added = True
 
-        if os.getenv('OPENROUTER_API_KEY'):
-            model = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.2-3b-instruct:free')
-            manager.add_provider(OpenRouterProvider(os.getenv('OPENROUTER_API_KEY'), model))
+        if config.openrouter.api_key:
+            manager.add_provider(OpenRouterProvider(config=config.openrouter))
             added = True
 
-        # Si no hay APIs, usar Ollama
         if not added:
-            print("ℹ️ No hay API keys, usando Ollama local como fallback")
-            host = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-            model = os.getenv('OLLAMA_MODEL', 'llama3.2')
-            manager.add_provider(OllamaProvider(host, model))
+            print("No hay API keys, usando Ollama local como fallback")
+            manager.add_provider(OllamaProvider(config=config.ollama))
 
     else:
         raise Exception(f"AI_PROVIDER inválido: {provider_type}. Usa 'ollama', 'api' o 'auto'")
 
-    print("="*60)
-    print(f"✅ Total de proveedores configurados: {len(manager.providers)}\n")
+    print("=" * 60)
+    print(f"Total de proveedores configurados: {len(manager.providers)}\n")
 
     return manager
-
-
-# Prueba de proveedores
-if __name__ == "__main__":
-    # Crear gestor desde configuración
-    manager = create_provider_from_config()
-
-    # Prompt de prueba
-    test_prompt = """Eres un asistente que clasifica correos bancarios en español.
-
-Analiza este correo y responde SOLO con un JSON:
-
-Remitente: notificaciones@banco.com
-Asunto: Recordatorio: Pago de tarjeta vence mañana
-Cuerpo: Tu pago mínimo de $2,500.00 vence el 03/01/2026.
-
-Responde EXACTAMENTE en este formato JSON:
-{
-  "category": "pago",
-  "priority": "urgente",
-  "summary": "Pago de $2,500.00 vence mañana",
-  "action_required": true
-}"""
-
-    # Hacer 3 llamadas para ver la rotación
-    print("\n🧪 Probando rotación de proveedores...\n")
-    for i in range(3):
-        print(f"\n--- Llamada {i+1} ---")
-        try:
-            result = manager.generate(test_prompt)
-            print(f"✅ Resultado: {json.dumps(result, indent=2, ensure_ascii=False)}")
-        except Exception as e:
-            print(f"❌ Error: {e}")
