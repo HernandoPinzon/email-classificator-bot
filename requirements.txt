@@ -1,0 +1,18 @@
+# Dependencias del Clasificador de Correos Bancarios
+
+# Gmail API
+google-auth-oauthlib>=1.0.0
+google-auth-httplib2>=0.1.0
+google-api-python-client>=2.0.0
+
+# HTTP requests (para Telegram, Ollama y APIs de IA)
+requests>=2.31.0
+
+# Variables de entorno
+python-dotenv>=1.0.0
+
+# Base de datos (incluido en Python, pero listado para referencia)
+# sqlite3 (built-in)
+
+# Nota: No se requieren SDKs adicionales para las APIs de IA
+# (Groq, Cerebras, Gemini, OpenRouter) ya que usamos requests directamente
