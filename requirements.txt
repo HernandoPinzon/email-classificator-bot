@@ -14,5 +14,8 @@ python-dotenv>=1.0.0
 # Base de datos (incluido en Python, pero listado para referencia)
 # sqlite3 (built-in)
 
+# Testing
+pytest>=7.0.0
+
 # Nota: No se requieren SDKs adicionales para las APIs de IA
 # (Groq, Cerebras, Gemini, OpenRouter) ya que usamos requests directamente
