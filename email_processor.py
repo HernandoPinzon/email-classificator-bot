@@ -67,7 +67,10 @@ class EmailProcessor:
 
         notifier = None
         if config.telegram.bot_token and config.telegram.chat_id:
-            notifier = TelegramNotifier(config.telegram)
+            try:
+                notifier = TelegramNotifier(config.telegram)
+            except Exception as e:
+                print(f"Telegram no configurado: {e}")
 
         return cls(
             email_fetcher=email_fetcher,
