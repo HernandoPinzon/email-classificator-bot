@@ -61,6 +61,12 @@ class GmailConfig:
     credentials_path: str = "./config/credentials.json"
     token_path: str = "./config/token.json"
     scopes: List[str] = field(default_factory=lambda: ['https://www.googleapis.com/auth/gmail.modify'])
+    # Modo headless: 'auto', 'browser', 'manual', 'token_env'
+    # - auto: intenta browser, si falla usa manual
+    # - browser: usa navegador local (requiere GUI)
+    # - manual: muestra URL y pide código manualmente (para servidores)
+    # - token_env: usa token desde variable de entorno GMAIL_TOKEN_JSON
+    auth_mode: str = "auto"
 
 
 @dataclass
@@ -182,6 +188,7 @@ def load_config_from_env() -> AppConfig:
         gmail=GmailConfig(
             credentials_path=os.getenv('GMAIL_CREDENTIALS_PATH', './config/credentials.json'),
             token_path=os.getenv('GMAIL_TOKEN_PATH', './config/token.json'),
+            auth_mode=os.getenv('GMAIL_AUTH_MODE', 'auto'),
         ),
         database=DatabaseConfig(
             path=os.getenv('DATABASE_PATH', './emails.db'),
