@@ -11,21 +11,48 @@ from config import TelegramConfig
 from http_client import RequestsHttpClient
 
 
+class TelegramConfigError(Exception):
+    """Error de configuración de Telegram"""
+    pass
+
+
 class TelegramNotifier(Notifier):
     """Gestor de notificaciones a Telegram"""
 
-    def __init__(self, config: TelegramConfig, http_client=None):
+    def __init__(self, config: TelegramConfig, http_client=None, validate: bool = True):
         """
         Inicializa el notificador de Telegram
 
         Args:
             config: Configuración de Telegram
             http_client: Cliente HTTP (inyectable para testing)
+            validate: Si True, valida que las credenciales no estén vacías
+
+        Raises:
+            TelegramConfigError: Si las credenciales están vacías y validate=True
         """
+        if validate:
+            if not config.bot_token or not config.bot_token.strip():
+                raise TelegramConfigError(
+                    "TELEGRAM_BOT_TOKEN no configurado. "
+                    "Obtén un token de @BotFather en Telegram."
+                )
+            if not config.chat_id or not config.chat_id.strip():
+                raise TelegramConfigError(
+                    "TELEGRAM_CHAT_ID no configurado. "
+                    "Usa @userinfobot en Telegram para obtener tu chat ID."
+                )
+
         self.bot_token = config.bot_token
         self.chat_id = config.chat_id
         self.api_url = f"{config.api_url}/bot{config.bot_token}"
         self.http_client = http_client or RequestsHttpClient(timeout=10)
+        self._configured = bool(config.bot_token and config.chat_id)
+
+    @property
+    def is_configured(self) -> bool:
+        """Retorna True si el notificador está configurado correctamente"""
+        return self._configured
 
     @classmethod
     def from_credentials(cls, bot_token: str, chat_id: str, http_client=None):
