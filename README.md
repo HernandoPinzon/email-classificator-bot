@@ -212,20 +212,22 @@ TELEGRAM_CHAT_ID=123456789            # Opcional
 
 ## 🎮 Uso
 
-### Probar que todo funciona
+### Verificar que todo funciona
 
 ```bash
-# 1. Probar Ollama
-python bank_classifier.py
+# Verificar TODAS las integraciones de una vez
+python verify_integrations.py
 
-# 2. Probar Telegram
-python telegram_notifier.py
-
-# 3. Primera autenticación con Gmail (abrirá el navegador)
-python email_processor.py
+# O verificar componentes individuales
+python verify_integrations.py telegram  # Solo Telegram
+python verify_integrations.py ai        # Solo proveedores de IA
+python verify_integrations.py gmail     # Solo Gmail
+python verify_integrations.py ollama    # Solo Ollama local
 ```
 
-La primera vez te pedirá permisos en Gmail. Acepta y se guardará un `token.json` para futuros usos.
+Este script prueba las conexiones reales y te muestra qué está funcionando y qué falta configurar.
+
+La primera vez que pruebes Gmail, se abrirá el navegador para autenticar. Acepta y se guardará un `token.json` para futuros usos.
 
 ### Procesar correos manualmente
 
@@ -270,6 +272,55 @@ crontab -e
    - Programa: `C:\ruta\al\venv\Scripts\python.exe`
    - Argumentos: `email_processor.py`
    - Iniciar en: `C:\ruta\al\proyecto`
+
+## 🧪 Testing
+
+### Pruebas Unitarias
+
+Las pruebas unitarias verifican la lógica del código usando mocks (simulaciones):
+
+```bash
+# Instalar pytest (si no está instalado)
+pip install pytest
+
+# Ejecutar todas las pruebas
+pytest tests/ -v
+
+# Ejecutar un archivo específico
+pytest tests/test_bank_classifier.py -v
+
+# Ejecutar una clase de tests
+pytest tests/test_bank_classifier.py::TestExtractAmount -v
+
+# Ejecutar un test específico
+pytest tests/test_bank_classifier.py::TestExtractAmount::test_extract_amount_with_dollar_sign -v
+
+# Con reporte de cobertura
+pip install pytest-cov
+pytest tests/ --cov=. --cov-report=term-missing
+```
+
+### Pruebas de Integración
+
+Para probar las conexiones reales con servicios externos:
+
+```bash
+# Verificar TODAS las integraciones
+python verify_integrations.py
+
+# Verificar solo un componente
+python verify_integrations.py telegram
+python verify_integrations.py ai
+python verify_integrations.py gmail
+python verify_integrations.py ollama
+```
+
+### Resumen de Pruebas
+
+| Tipo | Comando | Qué prueba |
+|------|---------|------------|
+| Unitarias | `pytest tests/` | Lógica del código (con mocks) |
+| Integración | `python verify_integrations.py` | Conexiones reales a servicios |
 
 ## 📊 Categorías y Prioridades
 
