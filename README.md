@@ -246,6 +246,94 @@ Esto:
 
 Al final del script te preguntará si quieres enviar el resumen diario. También puedes crear un cron job o tarea programada.
 
+## ☁️ Despliegue en la Nube (Headless)
+
+Para ejecutar el bot en un servidor sin GUI (AWS, GCP, DigitalOcean, etc.), necesitas autenticarte con Gmail de forma diferente ya que no hay navegador disponible.
+
+### Opción 1: Pre-generar token localmente (Recomendado)
+
+1. **En tu máquina local** (con navegador), genera el token:
+   ```bash
+   python generate_gmail_token.py
+   ```
+
+2. El script te dará instrucciones para exportar el token. Copia la línea que dice:
+   ```bash
+   export GMAIL_TOKEN_JSON='eyJ0b2tlbi...'
+   ```
+
+3. **En tu servidor**, configura las variables de entorno:
+   ```bash
+   export GMAIL_AUTH_MODE='token_env'
+   export GMAIL_TOKEN_JSON='eyJ0b2tlbi...'  # El token generado
+   ```
+
+### Opción 2: Autenticación manual en el servidor
+
+Si prefieres autenticarte directamente en el servidor:
+
+1. Configura el modo manual:
+   ```bash
+   export GMAIL_AUTH_MODE='manual'
+   ```
+
+2. Ejecuta el script:
+   ```bash
+   python email_processor.py
+   ```
+
+3. El script mostrará una URL. Ábrela en cualquier navegador (puede ser tu laptop), autoriza, y copia el código de autorización que te da Google.
+
+4. Pega el código en la terminal del servidor.
+
+### Opción 3: Copiar token.json
+
+1. Autentica localmente (se crea `config/token.json`)
+2. Copia el archivo al servidor:
+   ```bash
+   scp config/token.json usuario@servidor:/ruta/al/proyecto/config/
+   ```
+
+### Configuración para Docker
+
+```dockerfile
+# Dockerfile
+ENV GMAIL_AUTH_MODE=token_env
+# El token se pasa en docker run o docker-compose
+```
+
+```yaml
+# docker-compose.yml
+services:
+  email-bot:
+    environment:
+      - GMAIL_AUTH_MODE=token_env
+      - GMAIL_TOKEN_JSON=${GMAIL_TOKEN_JSON}
+```
+
+### Configuración para GitHub Actions / CI
+
+```yaml
+# .github/workflows/check-emails.yml
+jobs:
+  process-emails:
+    runs-on: ubuntu-latest
+    env:
+      GMAIL_AUTH_MODE: token_env
+      GMAIL_TOKEN_JSON: ${{ secrets.GMAIL_TOKEN_JSON }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Process emails
+        run: python email_processor.py
+```
+
+### Variables de entorno para Cloud
+
+| Variable | Descripción | Valores |
+|----------|-------------|---------|
+| `GMAIL_AUTH_MODE` | Modo de autenticación | `auto`, `browser`, `manual`, `token_env` |
+| `GMAIL_TOKEN_JSON` | Token OAuth en base64 o JSON | String del token |
+
 ## ⏰ Automatización
 
 ### En Linux/Mac (crontab)
