@@ -1,0 +1,135 @@
+# =============================================================================
+# REGLAS DE CLASIFICACIÓN DE CORREOS
+# =============================================================================
+# Este archivo define las reglas para clasificar correos automáticamente.
+# Modifica estas listas según tus necesidades.
+#
+# PRIORIDADES:
+#   - urgente: Requiere acción inmediata (se envía alerta)
+#   - normal: Informativo importante
+#   - sin_prioridad: No requiere acción (se ignora en alertas)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# REMITENTES DE BAJA PRIORIDAD
+# -----------------------------------------------------------------------------
+# Correos de estos remitentes siempre serán clasificados como "sin_prioridad"
+# Útil para facturas de servicios que no necesitas revisar urgentemente.
+# Formato: lista de direcciones de correo (se comparan en minúsculas)
+
+low_priority_senders:
+  # Servicios de delivery/comida
+  - facturacionelectronica@rappi.com
+  - noreply@rappi.com
+  - info@rappi.com
+
+  # Agrega aquí otros remitentes que quieras ignorar
+  # - newsletter@ejemplo.com
+  # - noreply@tienda.com
+
+# -----------------------------------------------------------------------------
+# REMITENTES DE ALTA PRIORIDAD
+# -----------------------------------------------------------------------------
+# Correos de estos remitentes siempre serán clasificados como "urgente"
+# Útil para bancos o servicios críticos.
+
+high_priority_senders: []
+  # Ejemplo: tu banco principal
+  # - alertas@tubanco.com
+  # - notificaciones@banco.com
+
+# -----------------------------------------------------------------------------
+# PALABRAS CLAVE DE URGENCIA
+# -----------------------------------------------------------------------------
+# Si el asunto o cuerpo contiene estas palabras, el correo es "urgente"
+# Se buscan en minúsculas, así que no importa mayúsculas/minúsculas
+
+urgent_keywords:
+  # Pagos y vencimientos
+  - pago pendiente
+  - pago vencido
+  - por vencer
+  - último día
+  - fecha límite
+
+  # Acciones requeridas
+  - acción requerida
+  - urgente
+  - importante
+  - verificación requerida
+  - confirma tu
+
+  # Cargos próximos
+  - cobro próximo
+  - cargo próximo
+
+  # Problemas de cuenta
+  - saldo insuficiente
+  - cuenta bloqueada
+  - suspensión
+  - bloqueo preventivo
+  - actividad sospechosa
+
+# -----------------------------------------------------------------------------
+# PALABRAS CLAVE DE BAJA PRIORIDAD
+# -----------------------------------------------------------------------------
+# Si el asunto o cuerpo contiene estas palabras (y no hay urgentes),
+# el correo es "sin_prioridad"
+
+low_priority_keywords:
+  # Marketing y promociones
+  - promoción
+  - oferta
+  - descuento
+  - newsletter
+  - boletín
+
+  # Contenido informativo
+  - tips
+  - consejos
+  - beneficios
+  - programa de puntos
+
+  # Eventos y encuestas
+  - invitación
+  - evento
+  - encuesta
+  - noticia
+
+  # Servicios de delivery (facturas informativas)
+  - rappi pro
+  - tarifa de servicio
+  - factura electrónica de venta
+  - suscripción a rappi
+
+# -----------------------------------------------------------------------------
+# PALABRAS CLAVE DE PAGOS
+# -----------------------------------------------------------------------------
+# Ayudan a identificar correos relacionados con transacciones
+
+payment_keywords:
+  - pago
+  - cargo
+  - compra
+  - transferencia
+  - retiro
+  - depósito
+  - comisión
+  - intereses
+  - domiciliación
+
+# -----------------------------------------------------------------------------
+# PATRONES PARA EXTRAER MONTOS
+# -----------------------------------------------------------------------------
+# Expresiones regulares para detectar cantidades de dinero en los correos
+# Formato: regex de Python
+
+amount_patterns:
+  # $1,234.56 o $1234.56
+  - '\$\s*[\d,]+\.?\d{0,2}'
+
+  # 1234 pesos, 1234 MXN, etc.
+  - '[\d,]+\.?\d{0,2}\s*(?:pesos|MXN|USD|EUR|COP)'
+
+  # total: $1234, monto: 1234, etc.
+  - '(?:total|monto|importe|cantidad|cargo):\s*\$?\s*[\d,]+\.?\d{0,2}'
