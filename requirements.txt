@@ -11,6 +11,9 @@ requests>=2.31.0
 # Variables de entorno
 python-dotenv>=1.0.0
 
+# Configuración YAML
+PyYAML>=6.0
+
 # Base de datos (incluido en Python, pero listado para referencia)
 # sqlite3 (built-in)
 

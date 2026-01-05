@@ -39,6 +39,10 @@ class BankEmailClassifier(EmailClassifier):
         self.payment_keywords = self.config.payment_keywords
         self.low_priority_keywords = self.config.low_priority_keywords
 
+        # Cargar listas de remitentes por prioridad
+        self.low_priority_senders = [s.lower() for s in (self.config.low_priority_senders or [])]
+        self.high_priority_senders = [s.lower() for s in (self.config.high_priority_senders or [])]
+
     @classmethod
     def with_provider_manager(cls, provider_manager, config: ClassifierConfig = None):
         """
@@ -77,17 +81,45 @@ class BankEmailClassifier(EmailClassifier):
 
         return None
 
-    def detect_priority_by_keywords(self, subject: str, body: str) -> str:
+    def detect_priority_by_sender(self, sender: str) -> Optional[str]:
         """
-        Detecta prioridad usando palabras clave (método rápido sin LLM)
+        Detecta prioridad basándose en el remitente
+
+        Args:
+            sender: Dirección de correo del remitente
+
+        Returns:
+            'urgente', 'sin_prioridad', o None si no hay coincidencia
+        """
+        sender_lower = sender.lower()
+
+        # Primero verificar remitentes de alta prioridad
+        if any(s in sender_lower for s in self.high_priority_senders):
+            return 'urgente'
+
+        # Luego verificar remitentes de baja prioridad
+        if any(s in sender_lower for s in self.low_priority_senders):
+            return 'sin_prioridad'
+
+        return None
+
+    def detect_priority_by_keywords(self, subject: str, body: str, sender: str = "") -> str:
+        """
+        Detecta prioridad usando palabras clave y remitente (método rápido sin LLM)
 
         Args:
             subject: Asunto del correo
             body: Cuerpo del correo
+            sender: Remitente del correo
 
         Returns:
             'urgente', 'normal', o 'sin_prioridad'
         """
+        # Primero verificar por remitente (tiene prioridad sobre keywords)
+        sender_priority = self.detect_priority_by_sender(sender)
+        if sender_priority:
+            return sender_priority
+
         text = f"{subject} {body}".lower()
 
         if any(keyword in text for keyword in self.urgent_keywords):
@@ -151,13 +183,13 @@ Responde EXACTAMENTE en este formato JSON:
             if self.ai_provider:
                 return self.ai_provider.generate(prompt)
             else:
-                return self._fallback_classification(subject, body)
+                return self._fallback_classification(subject, body, sender)
 
         except Exception as e:
             print(f"Error clasificando con LLM: {e}")
-            return self._fallback_classification(subject, body)
+            return self._fallback_classification(subject, body, sender)
 
-    def _fallback_classification(self, subject: str, body: str) -> Dict:
+    def _fallback_classification(self, subject: str, body: str, sender: str = "") -> Dict:
         """Clasificación de respaldo cuando el LLM falla"""
         text_lower = f"{subject} {body}".lower()
 
@@ -172,7 +204,7 @@ Responde EXACTAMENTE en este formato JSON:
         else:
             category = 'notificacion'
 
-        priority = self.detect_priority_by_keywords(subject, body)
+        priority = self.detect_priority_by_keywords(subject, body, sender)
 
         return {
             'category': category,
