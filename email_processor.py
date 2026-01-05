@@ -274,9 +274,10 @@ def main():
     processor.process_emails()
 
     print("\n" + "=" * 50)
-    print("¿Enviar resumen diario? (s/n): ", end='')
-    if input().lower() == 's':
-        processor.send_daily_summary()
+    print("Enviando resumen diario...")
+    print("=" * 50)
+
+    processor.send_daily_summary()
 
 
 if __name__ == "__main__":
