@@ -71,8 +71,23 @@ class EmailFetcher(ABC):
         pass
 
     @abstractmethod
-    def get_unread_emails(self, max_results: int = 50, query: str = "") -> List[Email]:
-        """Obtiene correos no leídos"""
+    def get_emails(
+        self,
+        max_results: int = 100,
+        since_yesterday: bool = True,
+        custom_query: str = None
+    ) -> List[Email]:
+        """
+        Obtiene correos según criterios de fecha.
+
+        Por defecto obtiene TODOS los correos desde ayer hasta ahora,
+        sin importar si están leídos o no.
+
+        Args:
+            max_results: Número máximo de correos
+            since_yesterday: Si True, correos desde ayer. Si False, solo no leídos.
+            custom_query: Query personalizada de Gmail
+        """
         pass
 
     @abstractmethod

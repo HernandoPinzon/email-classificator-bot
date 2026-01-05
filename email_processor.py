@@ -116,7 +116,11 @@ class EmailProcessor:
 
     def process_emails(self, send_notifications: bool = True) -> Dict:
         """
-        Procesa correos no leídos.
+        Procesa correos del día anterior hasta ahora.
+
+        El bot está diseñado para ejecutarse en la mañana temprano y analizar
+        TODOS los correos desde el día anterior hasta la hora de ejecución,
+        sin importar si están leídos o no.
 
         Args:
             send_notifications: Si True, envía notificaciones
@@ -128,13 +132,14 @@ class EmailProcessor:
             print("Falta inicializar email fetcher o clasificador")
             return {'processed': 0, 'urgent': 0, 'errors': 0}
 
-        emails = self._email_fetcher.get_unread_emails()
+        # Obtener correos desde ayer hasta ahora (leídos y no leídos)
+        emails = self._email_fetcher.get_emails(since_yesterday=True)
 
         if not emails:
-            print("No hay correos no leídos")
+            print("No hay correos en el período (ayer hasta ahora)")
             return {'processed': 0, 'urgent': 0, 'errors': 0}
 
-        print(f"Encontrados {len(emails)} correos no leídos")
+        print(f"Encontrados {len(emails)} correos (ayer hasta ahora)")
 
         processed_count = 0
         urgent_count = 0
