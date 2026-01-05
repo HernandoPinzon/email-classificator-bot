@@ -5,6 +5,7 @@ Implementaciones de EmailFetcher para obtener correos de diferentes fuentes.
 import base64
 import json
 import os
+from datetime import datetime, timedelta
 from typing import List, Optional
 from pathlib import Path
 
@@ -31,6 +32,28 @@ class GmailFetcher(EmailFetcher):
         self.scopes = config.scopes
         self.auth_mode = getattr(config, 'auth_mode', 'auto')
         self.service = None
+
+    def _build_date_query(self, since_yesterday: bool = True) -> str:
+        """
+        Construye la query de Gmail para filtrar por fecha.
+
+        Args:
+            since_yesterday: Si True, obtiene correos desde ayer hasta ahora.
+                           Si False, solo obtiene correos no leídos.
+
+        Returns:
+            Query string para Gmail API (ej: "after:2024/01/04")
+        """
+        if not since_yesterday:
+            return "is:unread"
+
+        # Calcular fecha de ayer a las 00:00
+        yesterday = datetime.now() - timedelta(days=1)
+        yesterday_str = yesterday.strftime('%Y/%m/%d')
+
+        # Gmail usa formato YYYY/MM/DD para queries de fecha
+        # after:YYYY/MM/DD obtiene correos desde esa fecha (inclusive)
+        return f"after:{yesterday_str}"
 
     def _load_token_from_env(self):
         """Carga credenciales desde variable de entorno GMAIL_TOKEN_JSON"""
@@ -180,13 +203,41 @@ class GmailFetcher(EmailFetcher):
             print(f"Error en autenticación Gmail: {e}")
             return False
 
-    def get_unread_emails(self, max_results: int = 50, query: str = "is:unread") -> List[Email]:
-        """Obtiene correos no leídos de Gmail"""
+    def get_emails(
+        self,
+        max_results: int = 100,
+        since_yesterday: bool = True,
+        custom_query: str = None
+    ) -> List[Email]:
+        """
+        Obtiene correos de Gmail según criterios de fecha.
+
+        Por defecto obtiene TODOS los correos desde ayer hasta ahora,
+        sin importar si están leídos o no. Ideal para ejecución matutina
+        que analiza correos del día anterior + madrugada actual.
+
+        Args:
+            max_results: Número máximo de correos a obtener (default: 100)
+            since_yesterday: Si True, obtiene correos desde ayer hasta ahora.
+                           Si False, solo obtiene correos no leídos.
+            custom_query: Query personalizada de Gmail (sobreescribe since_yesterday)
+
+        Returns:
+            Lista de objetos Email
+        """
         if not self.service:
             print("Gmail no autenticado. Llama a authenticate() primero")
             return []
 
         try:
+            # Determinar query a usar
+            if custom_query:
+                query = custom_query
+            else:
+                query = self._build_date_query(since_yesterday)
+
+            print(f"Query Gmail: {query}")
+
             results = self.service.users().messages().list(
                 userId='me',
                 q=query,
@@ -285,7 +336,7 @@ class MockEmailFetcher(EmailFetcher):
         self._should_fail_auth = False
 
     def set_emails(self, emails: List[Email]):
-        """Configura los correos que retornará get_unread_emails"""
+        """Configura los correos que retornará get_emails"""
         self.emails = emails
 
     def add_email(self, email: Email):
@@ -305,13 +356,23 @@ class MockEmailFetcher(EmailFetcher):
         self._should_fail_auth = True
         self.authenticated = False
 
-    def get_unread_emails(self, max_results: int = 50, query: str = "") -> List[Email]:
-        """Retorna los correos configurados"""
+    def get_emails(
+        self,
+        max_results: int = 100,
+        since_yesterday: bool = True,
+        custom_query: str = None
+    ) -> List[Email]:
+        """
+        Retorna los correos configurados para testing.
+
+        En el mock, since_yesterday no filtra por fecha real,
+        simplemente retorna todos los correos configurados.
+        """
         if not self.authenticated:
             return []
 
-        unread = [e for e in self.emails if e.id not in self.read_emails]
-        return unread[:max_results]
+        # En mock retornamos todos los correos (simulando comportamiento de fecha)
+        return self.emails[:max_results]
 
     def mark_as_read(self, email_id: str) -> bool:
         """Marca un correo como leído"""
