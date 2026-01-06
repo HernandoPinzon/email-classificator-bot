@@ -2,11 +2,10 @@
 Cliente HTTP abstracto para permitir testing con mocks.
 """
 
-from typing import Dict, Optional, Any
-from dataclasses import dataclass
+from typing import Dict, Optional
 import requests
 
-from interfaces import HttpResponse, HttpError
+from ..core.models import HttpResponse, HttpError
 
 
 class RequestsHttpClient:

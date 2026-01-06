@@ -75,7 +75,7 @@ class GmailConfig:
 @dataclass
 class DatabaseConfig:
     """Configuración para base de datos"""
-    path: str = "./emails.db"
+    path: str = "./data/emails.db"
 
 
 @dataclass
@@ -93,7 +93,7 @@ class ScheduleConfig:
 
 def _get_default_rules_path() -> str:
     """Obtiene la ruta por defecto del archivo de reglas"""
-    return str(Path(__file__).parent / "config" / "classification_rules.yaml")
+    return str(Path(__file__).parent.parent.parent / "config" / "classification_rules.yaml")
 
 
 def load_classification_rules(rules_path: str = None) -> dict:
@@ -281,7 +281,7 @@ def load_config_from_env() -> AppConfig:
             auth_mode=os.getenv('GMAIL_AUTH_MODE', 'auto'),
         ),
         database=DatabaseConfig(
-            path=os.getenv('DATABASE_PATH', './emails.db'),
+            path=os.getenv('DATABASE_PATH', './data/emails.db'),
         ),
         schedule=ScheduleConfig(
             check_mode=os.getenv('CHECK_MODE', 'daily'),

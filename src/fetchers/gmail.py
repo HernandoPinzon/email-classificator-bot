@@ -9,8 +9,9 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from pathlib import Path
 
-from interfaces import EmailFetcher, Email
-from config import GmailConfig
+from ..core.interfaces import EmailFetcher
+from ..core.models import Email
+from ..config import GmailConfig
 
 
 class GmailFetcher(EmailFetcher):

@@ -3,15 +3,16 @@ Pruebas para manejo de errores y casos edge.
 """
 
 import pytest
-from config import TelegramConfig, AIProviderConfig, OllamaConfig, GroqConfig
-from telegram_notifier import TelegramNotifier, TelegramConfigError, MockNotifier
-from ai_providers import (
+from src.config import TelegramConfig, AIProviderConfig, OllamaConfig, GroqConfig
+from src.notifiers import TelegramNotifier, TelegramConfigError, MockNotifier
+from src.providers import (
     OllamaProvider, GroqProvider, AIProviderManager,
     MockAIProvider, create_provider_from_config
 )
-from http_client import MockHttpClient, HttpResponse, HttpError
-from bank_classifier import BankEmailClassifier
-from interfaces import EmailClassification
+from src.utils import MockHttpClient
+from src.core.models import HttpResponse, HttpError
+from src.classifiers import BankEmailClassifier
+from src.core import EmailClassification
 
 
 class TestTelegramConfigValidation:

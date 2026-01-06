@@ -4,62 +4,21 @@ Define contratos que permiten inyección de dependencias y testing.
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Protocol
+from typing import List, Dict, Protocol
 
-
-@dataclass
-class EmailClassification:
-    """Resultado de clasificación de un correo"""
-    category: str
-    priority: str  # 'urgente', 'normal', 'sin_prioridad'
-    summary: str
-    amount: Optional[str] = None
-    action_required: bool = False
-
-
-@dataclass
-class Email:
-    """Representa un correo electrónico"""
-    id: str
-    subject: str
-    sender: str
-    body: str
-    date: str = ""
+from .models import Email, EmailClassification, HttpResponse
 
 
 class HttpClient(Protocol):
     """Protocolo para cliente HTTP - permite mockear llamadas externas"""
 
-    def post(self, url: str, **kwargs) -> 'HttpResponse':
+    def post(self, url: str, **kwargs) -> HttpResponse:
         """Realiza una petición POST"""
         ...
 
-    def get(self, url: str, **kwargs) -> 'HttpResponse':
+    def get(self, url: str, **kwargs) -> HttpResponse:
         """Realiza una petición GET"""
         ...
-
-
-@dataclass
-class HttpResponse:
-    """Respuesta HTTP estandarizada"""
-    status_code: int
-    text: str
-
-    def json(self) -> Dict:
-        """Parsea el contenido como JSON"""
-        import json
-        return json.loads(self.text)
-
-    def raise_for_status(self):
-        """Lanza excepción si el status code indica error"""
-        if self.status_code >= 400:
-            raise HttpError(f"HTTP {self.status_code}: {self.text}")
-
-
-class HttpError(Exception):
-    """Error en petición HTTP"""
-    pass
 
 
 class EmailFetcher(ABC):

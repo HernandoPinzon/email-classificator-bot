@@ -3,10 +3,10 @@ Pruebas unitarias para BankEmailClassifier.
 """
 
 import pytest
-from bank_classifier import BankEmailClassifier, MockEmailClassifier
-from ai_providers import MockAIProvider
-from interfaces import EmailClassification
-from config import ClassifierConfig
+from src.classifiers import BankEmailClassifier, MockEmailClassifier
+from src.providers import MockAIProvider
+from src.core import EmailClassification
+from src.config import ClassifierConfig
 
 
 class TestExtractAmount:
