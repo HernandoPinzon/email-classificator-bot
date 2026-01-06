@@ -78,6 +78,19 @@ class DatabaseConfig:
     path: str = "./emails.db"
 
 
+@dataclass
+class ScheduleConfig:
+    """Configuración de modo de ejecución"""
+    # Modo: 'hourly' o 'daily'
+    # - hourly: Revisa correos de las últimas N horas, solo notifica si hay importantes
+    # - daily: Revisa correos desde ayer, envía resumen diario completo
+    check_mode: str = "daily"
+    # Intervalo en horas (solo aplica en modo hourly)
+    check_interval_hours: int = 2
+    # Minutos extra para cubrir delays
+    check_buffer_minutes: int = 1
+
+
 def _get_default_rules_path() -> str:
     """Obtiene la ruta por defecto del archivo de reglas"""
     return str(Path(__file__).parent / "config" / "classification_rules.yaml")
@@ -223,6 +236,7 @@ class AppConfig:
     gmail: GmailConfig = field(default_factory=GmailConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     classifier: ClassifierConfig = field(default_factory=ClassifierConfig)
+    schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
 
 
 def load_config_from_env() -> AppConfig:
@@ -268,5 +282,10 @@ def load_config_from_env() -> AppConfig:
         ),
         database=DatabaseConfig(
             path=os.getenv('DATABASE_PATH', './emails.db'),
+        ),
+        schedule=ScheduleConfig(
+            check_mode=os.getenv('CHECK_MODE', 'daily'),
+            check_interval_hours=int(os.getenv('CHECK_INTERVAL_HOURS', '2')),
+            check_buffer_minutes=int(os.getenv('CHECK_BUFFER_MINUTES', '1')),
         ),
     )

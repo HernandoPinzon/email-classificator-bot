@@ -186,6 +186,42 @@ class TelegramNotifier(Notifier):
 
         return self.send_message(message, silent=True)
 
+    def send_hourly_summary(self, emails: List[Dict]) -> bool:
+        """
+        Envía resumen compacto para modo horario.
+        Solo lista los correos importantes con su emoji de prioridad.
+
+        Args:
+            emails: Lista de correos con 'priority' y 'summary'
+
+        Returns:
+            True si se envió correctamente
+        """
+        if not emails:
+            return True  # No hay nada que enviar
+
+        emoji_map = {
+            'urgente': '🚨',
+            'normal': '📧'
+        }
+
+        lines = []
+        for email in emails:
+            priority = email.get('priority', 'normal').lower()
+            emoji = emoji_map.get(priority, '📧')
+            summary = email.get('summary', email.get('subject', 'Sin asunto'))
+            # Truncar si es muy largo
+            if len(summary) > 60:
+                summary = summary[:57] + '...'
+            lines.append(f"{emoji} {summary}")
+
+        message = '\n'.join(lines)
+
+        # Si hay urgentes, notificar con sonido
+        has_urgent = any(e.get('priority', '').lower() == 'urgente' for e in emails)
+
+        return self.send_message(message, parse_mode="HTML", silent=not has_urgent)
+
     def test_connection(self) -> bool:
         """
         Prueba la conexión con Telegram

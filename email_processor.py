@@ -114,9 +114,14 @@ class EmailProcessor:
             print("Error en autenticación")
         return result
 
-    def process_emails(self, send_notifications: bool = True) -> Dict:
+    def process_emails(
+        self,
+        send_notifications: bool = True,
+        hours_ago: int = None,
+        buffer_minutes: int = 1
+    ) -> Dict:
         """
-        Procesa correos del día anterior hasta ahora.
+        Procesa correos del día anterior hasta ahora (o de las últimas N horas).
 
         El bot está diseñado para ejecutarse en la mañana temprano y analizar
         TODOS los correos desde el día anterior hasta la hora de ejecución,
@@ -124,26 +129,38 @@ class EmailProcessor:
 
         Args:
             send_notifications: Si True, envía notificaciones
+            hours_ago: Si se especifica, solo procesa correos de las últimas N horas
+            buffer_minutes: Minutos extra para cubrir delays (solo con hours_ago)
 
         Returns:
             Dict con estadísticas del procesamiento
         """
         if not self._email_fetcher or not self._classifier:
             print("Falta inicializar email fetcher o clasificador")
-            return {'processed': 0, 'urgent': 0, 'errors': 0}
+            return {'processed': 0, 'urgent': 0, 'normal': 0, 'errors': 0, 'important_emails': []}
 
-        # Obtener correos desde ayer hasta ahora (leídos y no leídos)
-        emails = self._email_fetcher.get_emails(since_yesterday=True)
+        # Obtener correos según el modo
+        if hours_ago is not None:
+            emails = self._email_fetcher.get_emails(
+                hours_ago=hours_ago,
+                buffer_minutes=buffer_minutes
+            )
+        else:
+            emails = self._email_fetcher.get_emails(since_yesterday=True)
 
         if not emails:
-            print("No hay correos en el período (ayer hasta ahora)")
-            return {'processed': 0, 'urgent': 0, 'errors': 0}
+            period = f"últimas {hours_ago}h" if hours_ago else "ayer hasta ahora"
+            print(f"No hay correos en el período ({period})")
+            return {'processed': 0, 'urgent': 0, 'normal': 0, 'errors': 0, 'important_emails': []}
 
-        print(f"Encontrados {len(emails)} correos (ayer hasta ahora)")
+        period = f"últimas {hours_ago}h" if hours_ago else "ayer hasta ahora"
+        print(f"Encontrados {len(emails)} correos ({period})")
 
         processed_count = 0
         urgent_count = 0
+        normal_count = 0
         error_count = 0
+        important_emails = []  # Para el resumen horario
 
         for email in emails:
             if self._repository and self._repository.is_processed(email.id):
@@ -169,20 +186,26 @@ class EmailProcessor:
 
                 processed_count += 1
 
-                if send_notifications and self._notifier:
-                    if classification.priority in ['urgente', 'normal']:
-                        if classification.priority == 'urgente':
-                            urgent_count += 1
+                # Trackear correos importantes
+                if classification.priority in ['urgente', 'normal']:
+                    email_data = {
+                        'subject': email.subject,
+                        'from': email.sender,
+                        'category': classification.category,
+                        'priority': classification.priority,
+                        'summary': classification.summary,
+                        'amount': classification.amount
+                    }
 
-                        email_data = {
-                            'subject': email.subject,
-                            'from': email.sender,
-                            'category': classification.category,
-                            'priority': classification.priority,
-                            'summary': classification.summary,
-                            'amount': classification.amount
-                        }
+                    if classification.priority == 'urgente':
+                        urgent_count += 1
+                    else:
+                        normal_count += 1
 
+                    important_emails.append(email_data)
+
+                    # Enviar notificación individual (solo en modo daily)
+                    if send_notifications and self._notifier:
                         self._notifier.send_email_alert(email_data)
 
             except Exception as e:
@@ -191,12 +214,16 @@ class EmailProcessor:
 
         print(f"\nProcesados {processed_count} correos nuevos")
         if urgent_count > 0:
-            print(f"{urgent_count} correos urgentes notificados")
+            print(f"{urgent_count} correos urgentes")
+        if normal_count > 0:
+            print(f"{normal_count} correos normales")
 
         return {
             'processed': processed_count,
             'urgent': urgent_count,
-            'errors': error_count
+            'normal': normal_count,
+            'errors': error_count,
+            'important_emails': important_emails
         }
 
     def send_daily_summary(self) -> bool:
@@ -263,21 +290,50 @@ def main():
     import sys
 
     processor = EmailProcessor.create_default()
+    config = processor.config
 
     if not processor.authenticate():
         sys.exit(1)
 
-    print("\n" + "=" * 50)
-    print("Procesando correos...")
-    print("=" * 50)
+    check_mode = config.schedule.check_mode
 
-    processor.process_emails()
+    if check_mode == "hourly":
+        # Modo horario: revisar últimas N horas, solo notificar si hay importantes
+        hours = config.schedule.check_interval_hours
+        buffer = config.schedule.check_buffer_minutes
 
-    print("\n" + "=" * 50)
-    print("Enviando resumen diario...")
-    print("=" * 50)
+        print("\n" + "=" * 50)
+        print(f"Modo horario: revisando correos de las últimas {hours}h...")
+        print("=" * 50)
 
-    processor.send_daily_summary()
+        # No enviar notificaciones individuales en modo horario
+        stats = processor.process_emails(
+            send_notifications=False,
+            hours_ago=hours,
+            buffer_minutes=buffer
+        )
+
+        # Solo enviar mensaje si hay correos importantes
+        important_emails = stats.get('important_emails', [])
+        if important_emails and processor.notifier:
+            print(f"\nEnviando resumen: {len(important_emails)} correo(s) importante(s)")
+            processor.notifier.send_hourly_summary(important_emails)
+        else:
+            print("\nNo hay correos importantes, no se envía notificación")
+
+    else:
+        # Modo diario: comportamiento original
+        print("\n" + "=" * 50)
+        print("Modo diario: procesando correos...")
+        print("=" * 50)
+
+        processor.process_emails()
+
+        print("\n" + "=" * 50)
+        print("Enviando resumen diario...")
+        print("=" * 50)
+
+        processor.send_daily_summary()
 
 
 if __name__ == "__main__":
