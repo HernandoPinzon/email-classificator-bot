@@ -4,12 +4,12 @@ Identifica prioridades y extrae montos de transacciones
 """
 
 import re
-import json
 from typing import Dict, Optional, List
 
-from interfaces import EmailClassifier, EmailClassification, AIProvider
-from config import ClassifierConfig
-from http_client import RequestsHttpClient
+from ..core.interfaces import EmailClassifier, AIProvider
+from ..core.models import EmailClassification
+from ..config import ClassifierConfig
+from ..utils import RequestsHttpClient
 
 
 class BankEmailClassifier(EmailClassifier):
@@ -57,7 +57,7 @@ class BankEmailClassifier(EmailClassifier):
         Factory method para crear clasificador con Ollama directo.
         Mantiene compatibilidad con código legacy.
         """
-        from ai_providers import OllamaProvider
+        from ..providers import OllamaProvider
         provider = OllamaProvider(host=host, model=model)
         return cls(config=config, ai_provider=provider)
 

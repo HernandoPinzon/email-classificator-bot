@@ -6,20 +6,21 @@ import pytest
 import sys
 from pathlib import Path
 
-# Agregar el directorio raíz al path para imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Agregar el directorio src al path para imports
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from interfaces import Email, EmailClassification
-from config import (
+from src.core import Email, EmailClassification
+from src.config import (
     AppConfig, ClassifierConfig, TelegramConfig,
     DatabaseConfig, AIProviderConfig, OllamaConfig
 )
-from http_client import MockHttpClient, HttpResponse
-from repositories import InMemoryEmailRepository
-from email_fetchers import MockEmailFetcher
-from telegram_notifier import MockNotifier
-from bank_classifier import MockEmailClassifier
-from ai_providers import MockAIProvider, AIProviderManager
+from src.utils import MockHttpClient
+from src.core.models import HttpResponse
+from src.repositories import InMemoryEmailRepository
+from src.fetchers import MockEmailFetcher
+from src.notifiers import MockNotifier
+from src.classifiers import MockEmailClassifier
+from src.providers import MockAIProvider, AIProviderManager
 
 
 # ============== Fixtures de Configuración ==============

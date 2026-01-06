@@ -6,9 +6,11 @@ Permite abstraer el acceso a datos y facilita testing.
 import sqlite3
 from typing import List, Dict, Optional
 from datetime import datetime
+from pathlib import Path
 
-from interfaces import EmailRepository, Email, EmailClassification
-from config import DatabaseConfig
+from ..core.interfaces import EmailRepository
+from ..core.models import Email, EmailClassification
+from ..config import DatabaseConfig
 
 
 class SQLiteEmailRepository(EmailRepository):
@@ -24,6 +26,9 @@ class SQLiteEmailRepository(EmailRepository):
     def _get_connection(self) -> sqlite3.Connection:
         """Obtiene una conexión a la base de datos"""
         if self._connection is None:
+            # Crear directorio si no existe
+            db_dir = Path(self.db_path).parent
+            db_dir.mkdir(parents=True, exist_ok=True)
             self._connection = sqlite3.connect(self.db_path)
         return self._connection
 

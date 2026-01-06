@@ -4,17 +4,18 @@ Pruebas unitarias para AIProviders.
 
 import pytest
 import json
-from ai_providers import (
+from src.providers import (
     OllamaProvider, GroqProvider, CerebrasProvider,
     GeminiProvider, OpenRouterProvider,
     AIProviderManager, MockAIProvider,
     create_provider_from_config
 )
-from config import (
+from src.config import (
     AIProviderConfig, OllamaConfig, GroqConfig,
     CerebrasConfig, GeminiConfig, OpenRouterConfig
 )
-from http_client import MockHttpClient, HttpResponse
+from src.utils import MockHttpClient
+from src.core.models import HttpResponse
 
 
 class TestOllamaProvider:

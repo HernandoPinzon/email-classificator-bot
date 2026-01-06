@@ -3,12 +3,12 @@ Pruebas de integración para EmailProcessor.
 """
 
 import pytest
-from email_processor import EmailProcessor
-from email_fetchers import MockEmailFetcher
-from repositories import InMemoryEmailRepository
-from bank_classifier import MockEmailClassifier
-from telegram_notifier import MockNotifier
-from interfaces import Email, EmailClassification
+from src.core import EmailProcessor
+from src.fetchers import MockEmailFetcher
+from src.repositories import InMemoryEmailRepository
+from src.classifiers import MockEmailClassifier
+from src.notifiers import MockNotifier
+from src.core import Email, EmailClassification
 
 
 class TestEmailProcessorInit:

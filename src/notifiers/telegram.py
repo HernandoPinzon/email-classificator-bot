@@ -3,12 +3,12 @@ Módulo de notificaciones para Telegram
 Envía alertas de correos importantes y resumen diario
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict
 from datetime import datetime
 
-from interfaces import Notifier, HttpResponse
-from config import TelegramConfig
-from http_client import RequestsHttpClient
+from ..core.interfaces import Notifier
+from ..config import TelegramConfig
+from ..utils import RequestsHttpClient
 
 
 class TelegramConfigError(Exception):
@@ -240,7 +240,7 @@ class MockNotifier(Notifier):
     """
 
     def __init__(self):
-        self.messages: List[str] = []
+        self.messages: List[Dict] = []
         self.alerts: List[Dict] = []
         self.summaries: List[Dict] = []
         self.connection_works = True
