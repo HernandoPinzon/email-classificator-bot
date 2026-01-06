@@ -55,6 +55,26 @@ class GmailFetcher(EmailFetcher):
         # after:YYYY/MM/DD obtiene correos desde esa fecha (inclusive)
         return f"after:{yesterday_str}"
 
+    def _build_hours_query(self, hours: int, buffer_minutes: int = 1) -> tuple[str, datetime]:
+        """
+        Construye la query de Gmail para filtrar por horas recientes.
+
+        Gmail API no soporta filtrado por hora exacta, solo por fecha.
+        Retornamos también el timestamp de corte para filtrar después en Python.
+
+        Args:
+            hours: Número de horas hacia atrás
+            buffer_minutes: Minutos extra para cubrir delays
+
+        Returns:
+            Tupla (query_string, cutoff_datetime)
+        """
+        cutoff = datetime.now() - timedelta(hours=hours, minutes=buffer_minutes)
+        # Usamos la fecha del cutoff para la query de Gmail
+        cutoff_date_str = cutoff.strftime('%Y/%m/%d')
+
+        return f"after:{cutoff_date_str}", cutoff
+
     def _load_token_from_env(self):
         """Carga credenciales desde variable de entorno GMAIL_TOKEN_JSON"""
         from google.oauth2.credentials import Credentials
@@ -203,11 +223,29 @@ class GmailFetcher(EmailFetcher):
             print(f"Error en autenticación Gmail: {e}")
             return False
 
+    def _parse_email_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parsea la fecha del header del email.
+
+        Args:
+            date_str: String de fecha del header Date
+
+        Returns:
+            datetime o None si no se puede parsear
+        """
+        from email.utils import parsedate_to_datetime
+        try:
+            return parsedate_to_datetime(date_str)
+        except Exception:
+            return None
+
     def get_emails(
         self,
         max_results: int = 100,
         since_yesterday: bool = True,
-        custom_query: str = None
+        custom_query: str = None,
+        hours_ago: int = None,
+        buffer_minutes: int = 1
     ) -> List[Email]:
         """
         Obtiene correos de Gmail según criterios de fecha.
@@ -221,6 +259,8 @@ class GmailFetcher(EmailFetcher):
             since_yesterday: Si True, obtiene correos desde ayer hasta ahora.
                            Si False, solo obtiene correos no leídos.
             custom_query: Query personalizada de Gmail (sobreescribe since_yesterday)
+            hours_ago: Si se especifica, filtra correos de las últimas N horas
+            buffer_minutes: Minutos extra para cubrir delays (solo con hours_ago)
 
         Returns:
             Lista de objetos Email
@@ -231,8 +271,11 @@ class GmailFetcher(EmailFetcher):
 
         try:
             # Determinar query a usar
+            cutoff_time = None
             if custom_query:
                 query = custom_query
+            elif hours_ago is not None:
+                query, cutoff_time = self._build_hours_query(hours_ago, buffer_minutes)
             else:
                 query = self._build_date_query(since_yesterday)
 
@@ -273,6 +316,15 @@ class GmailFetcher(EmailFetcher):
 
                 body = self._get_email_body(msg_data['payload'])
 
+                # Filtrar por hora si se especificó hours_ago
+                if cutoff_time and date:
+                    email_datetime = self._parse_email_date(date)
+                    if email_datetime:
+                        # Convertir a naive datetime para comparar
+                        email_naive = email_datetime.replace(tzinfo=None)
+                        if email_naive < cutoff_time:
+                            continue  # Saltear emails anteriores al cutoff
+
                 emails.append(Email(
                     id=msg['id'],
                     subject=subject,
@@ -280,6 +332,9 @@ class GmailFetcher(EmailFetcher):
                     body=body,
                     date=date
                 ))
+
+            if cutoff_time:
+                print(f"Filtrados {len(emails)} correos desde {cutoff_time.strftime('%H:%M')}")
 
             return emails
 
